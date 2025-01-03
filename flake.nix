@@ -73,9 +73,9 @@
               enable = true;
               package = postgresql;
               enableTCPIP = true;
-              #settings = import ./postgresql.conf.nix;
-              settings.shared_preload_libraries = "pg_cron, plrust";
-	      extensions = (with postgresql.pkgs; [ pg_cron pgjwt ]) ++ [ plrust pg_http];
+              settings = import ./postgresql.conf.nix;
+              #settings.shared_preload_libraries = "pg_cron, plrust";
+	      extensions = (with postgresql.pkgs; [ pg_cron pgjwt ]) ++ [ pg_http];
               # initialScript = ./src/some_init_script.sql;
             };
       };

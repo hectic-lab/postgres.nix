@@ -739,7 +739,7 @@
   #local_preload_libraries = ''
   #session_preload_libraries = ''
   #shared_preload_libraries = ''        # (change requires restart)
-  shared_preload_libraries = "pg_cron, plrust";
+  shared_preload_libraries = "pg_cron";
   #jit_provider = 'llvmjit'                # JIT library to use
   
   # - Other Defaults -
@@ -817,8 +817,8 @@
   # Add settings for extensions here
   #"plrust.work_dir" = "/var/lib/postgresql/plrust";
   #"plrust.allowed_dependencies" = "/etc/postgresql/allowed-dependencies.toml";
-  #"cron.host" = "/tmp";
+  "cron.host" = "/tmp";
   # TODO: remove hardcoded
-  #"cron.database_name" = "webstore";
-  #"cron.use_background_workers" = "on";
+  "cron.database_name" = "webstore";
+  "cron.use_background_workers" = "on";
 }
