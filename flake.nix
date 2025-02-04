@@ -109,27 +109,35 @@
               default = {};
               description = "Mapping of database names to migration folder paths";
             };
+	    environment = lib.mkOption {
+              type = lib.types.attrsOf lib.types.str;
+              default = {};
+              description = "Environment variables for PostgreSQL initialScript.";
+            };
           };
         };
       
         config = lib.mkIf cfg.enable {
-	   systemd.services = lib.mkMerge [
-             (lib.mapAttrs' (db: folder: {
-                "pgMigration-${db}" = {
-                  description = "Apply migrations for database ${db}";
-                  wants = [ "postgresql.service" ];
-                  after = [ "postgresql.service" ];
-                  wantedBy = [ "multi-user.target" ];
-                  serviceConfig = {
-                    Type = "oneshot";
-                    ExecStart = [
-                      "${util.packages.${system}.pg-migration}/bin/pg-migration -u postgres://localhost:${cfg.port}/${db} -d ${folder}"
-                    ];
-                  };
-                };
-             }) cfg.migrationFolders)
-             # Include other systemd services if needed
-           ];
+	  systemd.services = lib.mkMerge [
+            (lib.mapAttrs' (db: folder: {
+               "pgMigration-${db}" = {
+                 description = "Apply migrations for database ${db}";
+                 wants = [ "postgresql.service" ];
+                 after = [ "postgresql.service" ];
+                 wantedBy = [ "multi-user.target" ];
+                 serviceConfig = {
+                   Type = "oneshot";
+                   ExecStart = [
+                     "${util.packages.${system}.pg-migration}/bin/pg-migration -u postgres://localhost:${cfg.port}/${db} -d ${folder}"
+                   ];
+                 };
+               };
+            }) cfg.migrationFolders)
+            {
+	      postgresql.serviceConfig.Environment =
+                builtins.map (name: "${name}=${cfg.env.${name}}") (lib.attrNames cfg.env);
+	    }
+          ];
           services.postgresql = {
             package    = cfg.package;
             enableTCPIP = cfg.enableTCPIP;
