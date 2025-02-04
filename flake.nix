@@ -64,20 +64,58 @@
     {
       packages.${system} = {
         plrust = plrust;
-        plrustc = pkgs.plrustc;
 	pg_http = pg_http;
-	cargo-pgrx = pkgs.cargo-pgrx;
       };
-      nixosModules.${system}.postgresqlService = {
-            services.postgresql = {
-              enable = true;
-              package = postgresql;
-              enableTCPIP = true;
-              settings = import ./postgresql.conf.nix;
-              #settings.shared_preload_libraries = "pg_cron, plrust";
-	      extensions = (with postgresql.pkgs; [ pg_cron pgjwt ]) ++ [ pg_http];
-              # initialScript = ./src/some_init_script.sql;
+      nixosModules.${system}.postgresqlService = { lib, config, pkgs, ... }: let
+        cfg = config.services.postgresql;
+      in {
+        options = {
+          services.postgresql = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
             };
+            package = lib.mkOption {
+              type = lib.types.package;
+              default = pkgs.postgresql_16;
+            };
+            enableTCPIP = lib.mkOption {
+              type = lib.types.bool;
+              default = true;
+            };
+            extensions = lib.mkOption {
+              type = lib.types.attrsOf lib.types.bool;
+              default = {
+                pg_cron  = true;
+                pgjwt    = true;
+                pg_net   = true;
+                pg_http  = true;
+                plrust   = true;
+              };
+            };
+            initialScript = lib.mkOption {
+              type = lib.types.nullOr lib.types.path;
+              default = null;
+            };
+            settings = lib.mkOption {
+              type = lib.types.attrs;
+              default = {};
+            };
+          };
+        };
+      
+        config = lib.mkIf cfg.enable {
+          services.postgresql = {
+            package    = cfg.package;
+            enableTCPIP = cfg.enableTCPIP;
+            settings = cfg.settings // {
+              shared_preload_libraries = lib.concatStringsSep ", "
+                (lib.attrNames (lib.filterAttrs (n: v: v) cfg.extensions));
+            };
+            extensions   = lib.attrValues (lib.filterAttrs (n: v: v) cfg.extensions);
+            initialScript = cfg.initialScript;
+          };
+        };
       };
       nixosConfigurations.${system}.default =
       nixpkgs.lib.nixosSystem {
@@ -108,13 +146,6 @@
 
             virtualisation.vmVariant = {
               services.getty.autologinUser = "root";
-	      #virtualisation.qemu.options = [
-	      #  "-nographic" 
-	      #  "-display" "curses"
-	      #  "-append" "console=ttyS0"
-	      #  "-serial" "mon:stdio"
-	      #  "-vga" "qxl"
-	      #];
               virtualisation.forwardPorts = [
                 { from = "host"; host.port = 40500; guest.port = 22; }
               ];
@@ -141,16 +172,10 @@
 	    networking.firewall = {
               enable = true;
               allowedTCPPorts = [
+	        53
 		22
               ];
             };
-
-            # Пример копирования postgresql.conf, если он лежит рядом
-            #environment.etc."postgresql/postgresql.conf".source = ./postgresql.conf;
-
-            # Если нужны какие-то другие файлы (например, allowed-dependencies.toml):
-            # environment.etc."postgresql/allowed-dependencies.toml".source = ./allowed-dependencies.toml;
-            # и т.д.
 
 	    system.stateVersion = "24.11";
           }
