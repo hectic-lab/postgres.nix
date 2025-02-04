@@ -65,10 +65,33 @@
 	pg_http = pg_http;
       };
       nixosModules.${system}.postgresqlService = { lib, config, pkgs, ... }: let
+         authPresets = {
+          localTrusted = builtins.concatStringsSep "\n" [
+	    "local all       all     trust"
+            "host  all      all     127.0.0.1/32   trust"
+            "host all       all     ::1/128        trust"
+          ];
+          allMixed = builtins.concatStringsSep "\n" [
+	    "local all       all     trust"
+            "host  sameuser    all     127.0.0.1/32 scram-sha-256"
+            "host  sameuser    all     ::1/128 scram-sha-256"
+	    "host  all        all     0.0.0.0/0 scram-sha-256"
+          ];
+	  localhostOnly = builtins.concatStringsSep "\n" [
+	    "local all       all     trust"
+            "host  sameuser    all     127.0.0.1/32 scram-sha-256"
+            "host  sameuser    all     ::1/128 scram-sha-256"
+          ];
+	};
         cfg = config.hectic.postgres;
       in {
         options = {
           hectic.postgres = {
+	    authPreset = lib.mkOption {
+              type = lib.types.enum (lib.attrNames authPresets);
+              default = "localhostOnly";
+              description = "Which authentication preset to use for PostgreSQL (e.g. localTrusted, allMixed, localhostOnly).";
+            };
             enable = lib.mkOption {
               type = lib.types.bool;
               default = false;
@@ -109,6 +132,11 @@
               default = {};
               description = "Mapping of database names to migration folder paths";
             };
+	    postgresPassword = lib.mkOption {
+              type = lib.types.str;
+              default = "strongpassword";
+              description = "Password for postgres user";
+            };
 	    environment = lib.mkOption {
               type = lib.types.attrsOf lib.types.str;
               default = {};
@@ -143,7 +171,7 @@
 	    enable = true;
             package = cfg.package;
             enableTCPIP = cfg.enableTCPIP;
-            settings = { port = lib.mkForce cfg.port; } // cfg.settings // {
+            settings = { port = lib.mkForce cfg.port; listen_addresses = "*"; } // cfg.settings // {
               shared_preload_libraries = lib.concatStringsSep ", "
                 (lib.attrNames (lib.filterAttrs (n: v: v && n != "pg_http" && n != "pgjwt") cfg.extensions));
             };
@@ -161,7 +189,11 @@
                 else null
               ) cfg.extensions)
             );
-	    initialScript = cfg.initialScript;
+	    authentication = lib.mkOverride 10 authPresets.${cfg.authPreset};
+	    initialScript = pkgs.writeText "init-sql-script" (''
+	      \echo '${cfg.postgresPassword}'
+	      ALTER USER postgres WITH PASSWORD '${cfg.postgresPassword}';
+	      '' + (builtins.readFile cfg.initialScript));
           };
         };
       };
@@ -185,6 +217,8 @@
               pg_http  = true;
             };
 
+	    hectic.postgres.authPreset = "allMixed";
+
 	    hectic.postgres.environment = {
               GATEWAY_SCHEMA = "zalupa";
 	    };
@@ -193,7 +227,7 @@
             hectic.postgres.initialScript = 
 	    pkgs.writeText "init-sql-script" ''
               \set gateway_schema `echo $GATEWAY_SCHEMA`
-              SELECT :'gateway_schema' = '''''' AS is_gateway_schema;
+              SELECT :'gateway_schema' = ''' AS is_gateway_schema;
               \gset
               \if :is_gateway_schema
                 \echo 'Error: Environment variable GATEWAY_SCHEMA is not set.'
@@ -233,6 +267,7 @@
               allowedTCPPorts = [
 	        53
 		22
+		5432
               ];
             };
 
