@@ -9,15 +9,15 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
-    y-util = {
-      url = "github:yukkop/y.util.nix";
+    util = {
+      url = "github:hectic-lab/util.nix";
       inputs = {
         nixpkgs.follows = "nixpkgs";
       };
     };
   };
 
-  outputs = { self, nixpkgs, y-util, rust-overlay, ... }:
+  outputs = { self, nixpkgs, util, rust-overlay, ... }:
     let
       trace = builtins.trace; # can change to builtins.traceVerbose to make it silent
       overlays = [ 
@@ -26,12 +26,10 @@
 	(import ./plrustc-overlay.nix)
       ];
     in
-    y-util.lib.forSpecSystemsWithPkgs ([ "x86_64-linux" "aarch64-linux" ]) overlays ({ system, pkgs }:
+    util.lib.forSpecSystemsWithPkgs ([ "x86_64-linux" "aarch64-linux" ]) overlays ({ system, pkgs }:
     let 
       lib = pkgs.lib;
       postgresql = pkgs.postgresql_16;
-
-      rustToolchain = pkgs.pkgsBuildHost.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
 
       buildPostgresqlExtension = pkgs.callPackage
         (import (builtins.path {
@@ -67,10 +65,10 @@
 	pg_http = pg_http;
       };
       nixosModules.${system}.postgresqlService = { lib, config, pkgs, ... }: let
-        cfg = config.services.postgresql;
+        cfg = config.hectic.postgres;
       in {
         options = {
-          services.postgresql = {
+          hectic.postgres = {
             enable = lib.mkOption {
               type = lib.types.bool;
               default = false;
@@ -101,14 +99,41 @@
               type = lib.types.attrs;
               default = {};
             };
+	    port = lib.mkOption {
+              type = lib.types.int;
+              default = 5432;
+              description = "Port to run PostgreSQL on";
+            };
+	    migrationFolders = lib.mkOption {
+              type = lib.types.attrsOf lib.types.path;
+              default = {};
+              description = "Mapping of database names to migration folder paths";
+            };
           };
         };
       
         config = lib.mkIf cfg.enable {
+	   systemd.services = lib.mkMerge [
+             (lib.mapAttrs' (db: folder: {
+                "pgMigration-${db}" = {
+                  description = "Apply migrations for database ${db}";
+                  wants = [ "postgresql.service" ];
+                  after = [ "postgresql.service" ];
+                  wantedBy = [ "multi-user.target" ];
+                  serviceConfig = {
+                    Type = "oneshot";
+                    ExecStart = [
+                      "${util.packages.${system}.pg-migration}/bin/pg-migration -u postgres://localhost:${cfg.port}/${db} -d ${folder}"
+                    ];
+                  };
+                };
+             }) cfg.migrationFolders)
+             # Include other systemd services if needed
+           ];
           services.postgresql = {
             package    = cfg.package;
             enableTCPIP = cfg.enableTCPIP;
-            settings = cfg.settings // {
+            settings = { port = lib.mkForce cfg.port; } // cfg.settings // {
               shared_preload_libraries = lib.concatStringsSep ", "
                 (lib.attrNames (lib.filterAttrs (n: v: v) cfg.extensions));
             };
@@ -117,7 +142,7 @@
           };
         };
       };
-      nixosConfigurations.${system}.default =
+      nixosConfigurations.${system} =
       nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
@@ -127,7 +152,6 @@
             ];
 	  })
 	  self.nixosModules.${system}.postgresqlService
-          # Основные настройки
           {
             environment.systemPackages = with pkgs; [
               gcc
@@ -135,7 +159,6 @@
               llvm
               makeWrapper
               pkg-config
-
               git
               gnupg
               wget
@@ -161,13 +184,6 @@
                 PasswordAuthentication = true;
               };
             };
-
-
-            # Создаем каталог /var/lib/postgresql/plrust как в Dockerfile
-            #systemd.tmpfiles.rules = [
-            #  "d /var/log/postgresql 0755 postgres postgres -"
-            #  "d /var/lib/postgresql/plrust 0755 postgres postgres -"
-            #];
 
 	    networking.firewall = {
               enable = true;
