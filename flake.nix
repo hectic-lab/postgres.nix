@@ -84,11 +84,11 @@
             extensions = lib.mkOption {
               type = lib.types.attrsOf lib.types.bool;
               default = {
-                pg_cron  = true;
-                pgjwt    = true;
-                pg_net   = true;
-                pg_http  = true;
-                plrust   = true;
+                pg_cron  = false;
+                pgjwt    = false;
+                pg_net   = false;
+                pg_http  = false;
+                plrust   = false;
               };
             };
             initialScript = lib.mkOption {
@@ -135,18 +135,33 @@
             }) cfg.migrationFolders)
             {
 	      postgresql.serviceConfig.Environment =
-                builtins.map (name: "${name}=${cfg.env.${name}}") (lib.attrNames cfg.env);
+                builtins.map 
+		  (name: "${name}=${cfg.environment.${name}}") (lib.attrNames cfg.environment);
 	    }
           ];
           services.postgresql = {
-            package    = cfg.package;
+	    enable = true;
+            package = cfg.package;
             enableTCPIP = cfg.enableTCPIP;
             settings = { port = lib.mkForce cfg.port; } // cfg.settings // {
               shared_preload_libraries = lib.concatStringsSep ", "
-                (lib.attrNames (lib.filterAttrs (n: v: v) cfg.extensions));
+                (lib.attrNames (lib.filterAttrs (n: v: v && n != "pg_http" && n != "pgjwt") cfg.extensions));
             };
-            extensions   = lib.attrValues (lib.filterAttrs (n: v: v) cfg.extensions);
-            initialScript = cfg.initialScript;
+	    extensions =
+	    let 
+              packages =  {
+                inherit (self.packages.${system}) plrust pg_http;
+		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron;
+	      };
+            in
+	    lib.attrValues (lib.filterAttrs (n: v: v != null)
+              (lib.mapAttrs' (name: enabled:
+                if enabled then
+                  lib.nameValuePair name (packages.${name} or (throw "Package ${name} not found in pkgs"))
+                else null
+              ) cfg.extensions)
+            );
+	    initialScript = cfg.initialScript;
           };
         };
       };
@@ -160,25 +175,45 @@
             ];
 	  })
 	  self.nixosModules.${system}.postgresqlService
+	  {
+            hectic.postgres.enable = true;
+            hectic.postgres.package = pkgs.postgresql_15;
+            hectic.postgres.extensions = {
+              pg_cron  = true;
+              pgjwt    = true;
+              pg_net   = true;
+              pg_http  = true;
+            };
+
+	    hectic.postgres.environment = {
+              GATEWAY_SCHEMA = "zalupa";
+	    };
+
+            # Provide an initial script if needed:
+            hectic.postgres.initialScript = 
+	    pkgs.writeText "init-sql-script" ''
+              \set gateway_schema `echo $GATEWAY_SCHEMA`
+              SELECT :'gateway_schema' = '''''' AS is_gateway_schema;
+              \gset
+              \if :is_gateway_schema
+                \echo 'Error: Environment variable GATEWAY_SCHEMA is not set.'
+                \quit 1
+              \endif
+
+	      ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
+            '';
+
+
+            hectic.postgres.migrationFolders = { };
+	  }
           {
-            environment.systemPackages = with pkgs; [
-              gcc
-              clang
-              llvm
-              makeWrapper
-              pkg-config
-              git
-              gnupg
-              wget
-	      curl
-	      cacert
-	      neovim
-            ];
+            environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 ];
 
             virtualisation.vmVariant = {
               services.getty.autologinUser = "root";
               virtualisation.forwardPorts = [
                 { from = "host"; host.port = 40500; guest.port = 22; }
+                { from = "host"; host.port = 54321; guest.port = 5432; }
               ];
             };
 
@@ -189,7 +224,7 @@
             services.openssh = {
               enable = true;
               settings = {
-                PasswordAuthentication = true;
+                PasswordAuthentication = false;
               };
             };
 

@@ -14,6 +14,11 @@
   # Set the PostgreSQL port (default 5432):
   hectic.postgres.port = 5433;
 
+  hectic.postgres.environment = {
+        VARIABLE_1 = "value_1";
+        VARIABLE_2 = "value_2";
+  };
+
   # Override or add any PostgreSQL settings (must be attrs):
   hectic.postgres.settings = {
     shared_buffers = "128MB";
