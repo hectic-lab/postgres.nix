@@ -46,7 +46,7 @@
         version = "1.6.1";
       in 
       buildPostgresqlExtension { 
-        pname = "pg_http";
+        pname = "http";
         inherit version;
         
         src = pkgs.fetchFromGitHub {
@@ -87,14 +87,14 @@
       in {
         options = {
           hectic.postgres = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+            };
 	    authPreset = lib.mkOption {
               type = lib.types.enum (lib.attrNames authPresets);
               default = "localhostOnly";
               description = "Which authentication preset to use for PostgreSQL (e.g. localTrusted, allMixed, localhostOnly).";
-            };
-            enable = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
             };
             package = lib.mkOption {
               type = lib.types.package;
