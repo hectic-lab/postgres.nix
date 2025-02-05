@@ -29,12 +29,12 @@
     util.lib.forSpecSystemsWithPkgs ([ "x86_64-linux" "aarch64-linux" ]) overlays ({ system, pkgs }:
     let 
       lib = pkgs.lib;
-      postgresql = pkgs.postgresql_16;
+      postgresql = pkgs.postgresql_15;
 
       buildPostgresqlExtension = pkgs.callPackage
         (import (builtins.path {
           name = "extension-builder";
-          path = "${nixpkgs.outPath}/pkgs/servers/sql/postgresql/buildPostgresqlExtension.nix";
+          path = trace "${nixpkgs.outPath}/pkgs/servers/sql/postgresql/buildPostgresqlExtension.nix" "${nixpkgs.outPath}/pkgs/servers/sql/postgresql/buildPostgresqlExtension.nix";
         })) { inherit postgresql; };
 
       plrust = pkgs.callPackage
@@ -52,7 +52,7 @@
         src = pkgs.fetchFromGitHub {
           owner = "pramsey";
           repo = "pgsql-http";
-          rev = "5e2bd270a9ce2b0e8e1fdf8e46b85396bd4125cd";
+          rev = "v${version}";
           hash = "sha256-C8eqi0q1dnshUAZjIsZFwa5FTYc7vmATF3vv2CReWPM=";
         };
 
@@ -226,6 +226,7 @@
             # Provide an initial script if needed:
             hectic.postgres.initialScript = 
 	    pkgs.writeText "init-sql-script" ''
+	      CREATE EXTENSION IF NOT EXISTS "http";
               \set gateway_schema `echo $GATEWAY_SCHEMA`
               SELECT :'gateway_schema' = ''' AS is_gateway_schema;
               \gset
