@@ -22,48 +22,12 @@
       trace = builtins.trace; # can change to builtins.traceVerbose to make it silent
       overlays = [ 
         (import rust-overlay)
+        util.overlays.default
 	(import ./cargo-pgrx-overlay.nix)
-	(import ./plrustc-overlay.nix)
       ];
     in
     util.lib.forSpecSystemsWithPkgs ([ "x86_64-linux" "aarch64-linux" ]) overlays ({ system, pkgs }:
-    let 
-      lib = pkgs.lib;
-      postgresql = pkgs.postgresql_15;
-
-      buildPostgresqlExtension = pkgs.callPackage
-        (import (builtins.path {
-          name = "extension-builder";
-          path = trace "${nixpkgs.outPath}/pkgs/servers/sql/postgresql/buildPostgresqlExtension.nix" "${nixpkgs.outPath}/pkgs/servers/sql/postgresql/buildPostgresqlExtension.nix";
-        })) { inherit postgresql; };
-
-      plrust = pkgs.callPackage
-        ./build-plrust.nix {
-           inherit (pkgs.darwin.apple_sdk.frameworks) Security;
-	} {};
-
-      pg_http = let
-        version = "1.6.1";
-      in 
-      buildPostgresqlExtension { 
-        pname = "http";
-        inherit version;
-        
-        src = pkgs.fetchFromGitHub {
-          owner = "pramsey";
-          repo = "pgsql-http";
-          rev = "v${version}";
-          hash = "sha256-C8eqi0q1dnshUAZjIsZFwa5FTYc7vmATF3vv2CReWPM=";
-        };
-
-        nativeBuildInputs = [ pkgs.pkg-config pkgs.curl ];
-      };
-    in
     {
-      packages.${system} = {
-        plrust = plrust;
-	pg_http = pg_http;
-      };
       nixosModules.${system}.postgresqlService = { lib, config, pkgs, ... }: let
          authPresets = {
           localTrusted = builtins.concatStringsSep "\n" [
@@ -111,8 +75,7 @@
                 pg_cron  = false;
                 pgjwt    = false;
                 pg_net   = false;
-                pg_http  = false;
-                plrust   = false;
+                http  = false;
               };
             };
             initialScript = lib.mkOption {
@@ -174,13 +137,12 @@
             enableTCPIP = cfg.enableTCPIP;
             settings = { port = lib.mkForce cfg.port; listen_addresses = "*"; } // cfg.settings // {
               shared_preload_libraries = lib.concatStringsSep ", "
-                (lib.attrNames (lib.filterAttrs (n: v: v && n != "pg_http" && n != "pgjwt") cfg.extensions));
+                (lib.attrNames (lib.filterAttrs (n: v: v && n != "http" && n != "pgjwt") cfg.extensions));
             };
 	    extensions =
 	    let 
               packages =  {
-                inherit (self.packages.${system}) plrust pg_http;
-		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron;
+		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http;
 	      };
             in
 	    lib.attrValues (lib.filterAttrs (n: v: v != null)
@@ -215,7 +177,7 @@
               pg_cron  = true;
               pgjwt    = true;
               pg_net   = true;
-              pg_http  = true;
+              http  = true;
             };
 
 	    hectic.postgres.authPreset = "allMixed";
