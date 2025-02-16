@@ -75,6 +75,7 @@
                 pg_cron  = false;
                 pgjwt    = false;
                 pg_net   = false;
+                pg_smtp_client = false;
                 http  = false;
               };
             };
@@ -137,12 +138,12 @@
             enableTCPIP = cfg.enableTCPIP;
             settings = { port = lib.mkForce cfg.port; listen_addresses = "*"; } // cfg.settings // {
               shared_preload_libraries = lib.concatStringsSep ", "
-                (lib.attrNames (lib.filterAttrs (n: v: v && n != "http" && n != "pgjwt") cfg.extensions));
+                (lib.attrNames (lib.filterAttrs (n: v: v && n != "http" && n != "pgjwt" && n != "pg_smtp_client") cfg.extensions));
             };
 	    extensions =
 	    let 
               packages =  {
-		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http;
+		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client;
 	      };
             in
 	    lib.attrValues (lib.filterAttrs (n: v: v != null)
@@ -177,6 +178,7 @@
               pg_cron  = true;
               pgjwt    = true;
               pg_net   = true;
+              pg_smtp_client   = true;
               http  = true;
             };
 
