@@ -120,9 +120,15 @@
                  wantedBy = [ "multi-user.target" ];
                  serviceConfig = {
                    Type = "oneshot";
-                   ExecStart = [
+                   ExecStart = let
+                     envArgs = builtins.concatLists (
+                       builtins.attrValues (
+                         lib.mapAttrs (name: value: [ "-v" "${builtins.toLower name}=${value}" ]) cfg.environment
+                       )
+                     );
+                   in [
                      "${util.packages.${system}.pg-migration}/bin/pg-migration -u postgres://localhost:${cfg.port}/${db} -d ${folder}"
-                   ];
+                   ] ++ envArgs;
                  };
                };
             }) cfg.migrationFolders)
