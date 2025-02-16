@@ -112,31 +112,33 @@
       
         config = lib.mkIf cfg.enable {
 	  systemd.services = lib.mkMerge [
-            (lib.mapAttrs' (db: folder: {
-               "pgMigration-${db}" = {
-                 description = "Apply migrations for database ${db}";
-                 wants = [ "postgresql.service" ];
-                 after = [ "postgresql.service" ];
-                 wantedBy = [ "multi-user.target" ];
-                 serviceConfig = {
-                   Type = "oneshot";
-                   ExecStart = let
-                     envArgs = builtins.concatLists (
-                       builtins.attrValues (
-                         lib.mapAttrs (name: value: [ "-v" "${builtins.toLower name}=${value}" ]) cfg.environment
-                       )
-                     );
-                   in [
-                     "${util.packages.${system}.pg-migration}/bin/pg-migration -u postgres://localhost:${cfg.port}/${db} -d ${folder}"
-                   ] ++ envArgs;
-                 };
-               };
+            (lib.concatMapAttrs (db: folder: {
+              "pg_migration_${db}" = {
+                description = "Apply migrations for database ${db}";
+                wants = [ "postgresql.service" ];
+                after = [ "postgresql.service" ];
+                wantedBy = [ "multi-user.target" ];
+                serviceConfig = {
+                  Type = "oneshot";
+		  Environment="PATH=${pkgs.postgresql_15}/bin";
+                  ExecStart = let
+                    envArgsList = builtins.concatLists (
+                      builtins.attrValues (
+                        lib.mapAttrs (name: value: [ "-v" "${lib.strings.toLower name}=${value}" ]) cfg.environment
+                      )
+                    );
+		    pgVariables = lib.strings.concatMapStrings (x: " " + x) envArgsList;
+                  in [
+		    "${util.packages.${system}.pg-migration}/bin/pg-migration -d ${folder} migrate -u postgres://postgres:${cfg.postgresPassword}@localhost:${toString cfg.port}/${db}${pgVariables}"
+                  ];
+                };
+              };
             }) cfg.migrationFolders)
             {
-	      postgresql.serviceConfig.Environment =
-                builtins.map 
-		  (name: "${name}=${cfg.environment.${name}}") (lib.attrNames cfg.environment);
-	    }
+              postgresql.serviceConfig.Environment =
+                builtins.map (name: "${name}=${cfg.environment.${name}}")
+                  (lib.attrNames cfg.environment);
+            }
           ];
           services.postgresql = {
 	    enable = true;
@@ -206,11 +208,15 @@
                 \quit 1
               \endif
 
+	      CREATE SCHEMA :gateway_schema;
+
 	      ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
             '';
 
 
-            hectic.postgres.migrationFolders = { };
+            hectic.postgres.migrationFolders = { 
+	      postgres = ./test/migration;
+	    };
 	  }
           {
             environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 ];

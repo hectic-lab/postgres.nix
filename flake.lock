@@ -89,11 +89,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1739701957,
-        "narHash": "sha256-j6q7YBGXsoywKq98LAtVmr3zezPG2YgPc71yBOT1GNc=",
+        "lastModified": 1739726462,
+        "narHash": "sha256-y71MuuMXbV0kdOsodnwv4+E6RVRxLpYbRs7rI1qOuUI=",
         "owner": "hectic-lab",
         "repo": "util.nix",
-        "rev": "c3cdf9858a0210f999882dd4b87c473394c52c94",
+        "rev": "4d1c210986101d869f642c8c6976eed3f0192fb3",
         "type": "github"
       },
       "original": {
