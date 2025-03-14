@@ -28,7 +28,93 @@
     in
     util.lib.forSpecSystemsWithPkgs ([ "x86_64-linux" "aarch64-linux" ]) overlays ({ system, pkgs }:
     {
-      nixosModules.${system}.postgresqlService = { lib, config, pkgs, ... }: let
+      nixosConfigurations.${system} =
+      nixpkgs.lib.nixosSystem {
+        inherit system;
+        modules = [
+          ({ modulesPath, ... }: {
+            imports = [
+              (modulesPath + "/profiles/qemu-guest.nix")
+            ];
+	  })
+	  self.nixosModules.postgresqlService
+	  {
+            hectic.postgres.enable = true;
+            hectic.postgres.package = pkgs.postgresql_15;
+            hectic.postgres.extensions = {
+              pg_cron  = true;
+              pgjwt    = true;
+              pg_net   = true;
+              pg_smtp_client   = true;
+              http  = true;
+            };
+
+	    hectic.postgres.authPreset = "allMixed";
+
+	    hectic.postgres.environment = {
+              GATEWAY_SCHEMA = "zalupa";
+	    };
+
+            # Provide an initial script if needed:
+            hectic.postgres.initialScript = 
+	    pkgs.writeText "init-sql-script" ''
+	      CREATE EXTENSION IF NOT EXISTS "http";
+              \set gateway_schema `echo $GATEWAY_SCHEMA`
+              SELECT :'gateway_schema' = ''' AS is_gateway_schema;
+              \gset
+              \if :is_gateway_schema
+                \echo 'Error: Environment variable GATEWAY_SCHEMA is not set.'
+                \quit 1
+              \endif
+
+	      CREATE SCHEMA :gateway_schema;
+
+	      ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
+            '';
+
+
+            hectic.postgres.migrationFolders = { 
+	      postgres = ./test/migration;
+	    };
+	  }
+          {
+            environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 ];
+
+            virtualisation.vmVariant = {
+              services.getty.autologinUser = "root";
+              virtualisation.forwardPorts = [
+                { from = "host"; host.port = 40500; guest.port = 22; }
+                { from = "host"; host.port = 54321; guest.port = 5432; }
+              ];
+            };
+
+	    users.users.root.openssh.authorizedKeys.keys = [
+              ''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICrbBG+U07f7OKvOxYIGYCaNvyozzxQF+I9Fb5TYZErK yukkop vm-postgres''
+            ];
+
+            services.openssh = {
+              enable = true;
+              settings = {
+                PasswordAuthentication = false;
+              };
+            };
+
+	    networking.firewall = {
+              enable = true;
+              allowedTCPPorts = [
+	        53
+		22
+		5432
+              ];
+            };
+
+	    system.stateVersion = "24.11";
+          }
+        ];
+      };
+    }) // {
+      nixosModules.postgresqlService = { lib, config, pkgs, ... }: let
+         system = pkgs.system;
          authPresets = {
           localTrusted = builtins.concatStringsSep "\n" [
 	    "local all       all     trust"
@@ -169,89 +255,5 @@
           };
         };
       };
-      nixosConfigurations.${system} =
-      nixpkgs.lib.nixosSystem {
-        inherit system;
-        modules = [
-          ({ pkgs, modulesPath, ... }: {
-            imports = [
-              (modulesPath + "/profiles/qemu-guest.nix")
-            ];
-	  })
-	  self.nixosModules.${system}.postgresqlService
-	  {
-            hectic.postgres.enable = true;
-            hectic.postgres.package = pkgs.postgresql_15;
-            hectic.postgres.extensions = {
-              pg_cron  = true;
-              pgjwt    = true;
-              pg_net   = true;
-              pg_smtp_client   = true;
-              http  = true;
-            };
-
-	    hectic.postgres.authPreset = "allMixed";
-
-	    hectic.postgres.environment = {
-              GATEWAY_SCHEMA = "zalupa";
-	    };
-
-            # Provide an initial script if needed:
-            hectic.postgres.initialScript = 
-	    pkgs.writeText "init-sql-script" ''
-	      CREATE EXTENSION IF NOT EXISTS "http";
-              \set gateway_schema `echo $GATEWAY_SCHEMA`
-              SELECT :'gateway_schema' = ''' AS is_gateway_schema;
-              \gset
-              \if :is_gateway_schema
-                \echo 'Error: Environment variable GATEWAY_SCHEMA is not set.'
-                \quit 1
-              \endif
-
-	      CREATE SCHEMA :gateway_schema;
-
-	      ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
-            '';
-
-
-            hectic.postgres.migrationFolders = { 
-	      postgres = ./test/migration;
-	    };
-	  }
-          {
-            environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 ];
-
-            virtualisation.vmVariant = {
-              services.getty.autologinUser = "root";
-              virtualisation.forwardPorts = [
-                { from = "host"; host.port = 40500; guest.port = 22; }
-                { from = "host"; host.port = 54321; guest.port = 5432; }
-              ];
-            };
-
-	    users.users.root.openssh.authorizedKeys.keys = [
-              ''ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICrbBG+U07f7OKvOxYIGYCaNvyozzxQF+I9Fb5TYZErK yukkop vm-postgres''
-            ];
-
-            services.openssh = {
-              enable = true;
-              settings = {
-                PasswordAuthentication = false;
-              };
-            };
-
-	    networking.firewall = {
-              enable = true;
-              allowedTCPPorts = [
-	        53
-		22
-		5432
-              ];
-            };
-
-	    system.stateVersion = "24.11";
-          }
-        ];
-      };
-    });
+    };
 }
