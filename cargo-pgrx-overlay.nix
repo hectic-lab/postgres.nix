@@ -1,51 +1,52 @@
-final: prev:
-let
+final: prev: let
   generic = with prev;
-    { version
-    , hash
-    , cargoHash
+    {
+      version,
+      hash,
+      cargoHash,
     }:
-    rustPlatform.buildRustPackage rec {
-      pname = "cargo-pgrx";
+      rustPlatform.buildRustPackage rec {
+        pname = "cargo-pgrx";
 
-      inherit version;
+        inherit version;
 
-      src = fetchCrate {
-        inherit version pname hash;
+        src = fetchCrate {
+          inherit version pname hash;
+        };
+
+        inherit cargoHash;
+
+        nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [
+          pkg-config
+        ];
+
+        buildInputs =
+          lib.optionals stdenv.hostPlatform.isLinux [
+            openssl
+          ]
+          ++ lib.optionals stdenv.hostPlatform.isDarwin [
+            darwin.apple_sdk.frameworks.Security
+          ];
+
+        preCheck = ''
+          export PGRX_HOME=$(mktemp -d)
+        '';
+
+        checkFlags = [
+          # requires pgrx to be properly initialized with cargo pgrx init
+          "--skip=command::schema::tests::test_parse_managed_postmasters"
+        ];
+
+        meta = with lib; {
+          description = "Build Postgres Extensions with Rust";
+          homepage = "https://github.com/pgcentralfoundation/pgrx";
+          changelog = "https://github.com/pgcentralfoundation/pgrx/releases/tag/v${version}";
+          license = licenses.mit;
+          maintainers = with maintainers; [happysalada];
+          mainProgram = "cargo-pgrx";
+        };
       };
-
-      inherit cargoHash;
-
-      nativeBuildInputs = lib.optionals stdenv.hostPlatform.isLinux [
-        pkg-config
-      ];
-
-      buildInputs = lib.optionals stdenv.hostPlatform.isLinux [
-        openssl
-      ] ++ lib.optionals stdenv.hostPlatform.isDarwin [
-        darwin.apple_sdk.frameworks.Security
-      ];
-
-      preCheck = ''
-        export PGRX_HOME=$(mktemp -d)
-      '';
-
-      checkFlags = [
-        # requires pgrx to be properly initialized with cargo pgrx init
-        "--skip=command::schema::tests::test_parse_managed_postmasters"
-      ];
-
-      meta = with lib; {
-        description = "Build Postgres Extensions with Rust";
-        homepage = "https://github.com/pgcentralfoundation/pgrx";
-        changelog = "https://github.com/pgcentralfoundation/pgrx/releases/tag/v${version}";
-        license = licenses.mit;
-        maintainers = with maintainers; [ happysalada ];
-        mainProgram = "cargo-pgrx";
-      };
-    };
-in
-{
+in {
   cargo-pgrx = generic {
     version = "0.11.0";
     hash = "sha256-GiUjsSqnrUNgiT/d3b8uK9BV7cHFvaDoq6cUGRwPigM=";
