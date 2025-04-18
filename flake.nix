@@ -39,14 +39,17 @@
 	  })
 	  self.nixosModules.postgresqlService
 	  {
+            nix.settings.experimental-features = "nix-command flakes";
+
             hectic.postgres.enable = true;
             hectic.postgres.package = pkgs.postgresql_15;
             hectic.postgres.extensions = {
-              pg_cron  = true;
-              pgjwt    = true;
-              pg_net   = true;
+              pg_cron          = true;
+              pgjwt            = true;
+              pg_net           = true;
               pg_smtp_client   = true;
-              http  = true;
+              http             = true;
+	      postgreact       = true;
             };
 
 	    hectic.postgres.authPreset = "allMixed";
@@ -78,7 +81,7 @@
 	    };
 	  }
           {
-            environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 ];
+            environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 postgresql_15.dev ];
 
             virtualisation.vmVariant = {
               services.getty.autologinUser = "root";
@@ -158,11 +161,12 @@
             extensions = lib.mkOption {
               type = lib.types.attrsOf lib.types.bool;
               default = {
-                pg_cron  = false;
-                pgjwt    = false;
-                pg_net   = false;
+                pg_cron        = false;
+                pgjwt          = false;
+                pg_net         = false;
                 pg_smtp_client = false;
-                http  = false;
+                http           = false;
+		postgreact     = false;
               };
             };
             initialScript = lib.mkOption {
@@ -237,7 +241,7 @@
 	    extensions =
 	    let 
               packages =  {
-		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client;
+		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client postgreact;
 	      };
             in
 	    lib.attrValues (lib.filterAttrs (n: v: v != null)
