@@ -214,8 +214,8 @@
             enableTCPIP = cfg.enableTCPIP;
             settings =
               {
-                port = lib.mkForce cfg.port;
-                listen_addresses = lib.mkForce cfg.host;
+                port = cfg.port;
+                listen_addresses = cfg.host;
               }
               // cfg.settings
               // {
