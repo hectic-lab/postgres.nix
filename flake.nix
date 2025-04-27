@@ -57,10 +57,6 @@
 
             hectic.postgres.authPreset = "allMixed";
 
-            hectic.postgres.environment = {
-              GATEWAY_SCHEMA = "zalupa";
-            };
-
             # Provide an initial script if needed:
             hectic.postgres.initialScript = pkgs.writeText "init-sql-script" ''
               CREATE EXTENSION IF NOT EXISTS "http";
@@ -76,10 +72,6 @@
 
               ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
             '';
-
-            hectic.postgres.migrationFolders = {
-              postgres = ./test/migration;
-            };
           }
           {
             environment.systemPackages = with pkgs; [git curl neovim postgresql_15];
@@ -191,60 +183,31 @@
               type = lib.types.attrs;
               default = {};
             };
+            host = lib.mkOption {
+              type = lib.types.string;
+              default = "127.0.0.1";
+              description = "Address to run PostgreSQL on";
+            };
             port = lib.mkOption {
               type = lib.types.int;
               default = 5432;
               description = "Port to run PostgreSQL on";
             };
-            migrationFolders = lib.mkOption {
-              type = lib.types.attrsOf lib.types.path;
-              default = {};
-              description = "Mapping of database names to migration folder paths";
-            };
-            postgresPassword = lib.mkOption {
-              type = lib.types.str;
-              default = "strongpassword";
-              description = "Password for postgres user";
-            };
-            environment = lib.mkOption {
-              type = lib.types.attrsOf lib.types.str;
-              default = {};
-              description = "Environment variables for PostgreSQL initialScript.";
-            };
+            # passwordFile = lib.mkOption {
+            #   type = lib.types.path;
+            #   description = "Password for `postgres` user";
+            # };
           };
         };
 
         config = lib.mkIf cfg.enable {
-          systemd.services = lib.mkMerge [
-            (lib.concatMapAttrs (db: folder: {
-                "pg_migration_${db}" = {
-                  description = "Apply migrations for database ${db}";
-                  wants = ["postgresql.service"];
-                  after = ["postgresql.service"];
-                  wantedBy = ["multi-user.target"];
-                  serviceConfig = {
-                    Type = "oneshot";
-                    Environment = "PATH=${pkgs.postgresql_15}/bin";
-                    ExecStart = let
-                      envArgsList = builtins.concatLists (
-                        builtins.attrValues (
-                          lib.mapAttrs (name: value: ["-v" "${lib.strings.toLower name}=${value}"]) cfg.environment
-                        )
-                      );
-                      pgVariables = lib.strings.concatMapStrings (x: " " + x) envArgsList;
-                    in [
-                      "${util.packages.${system}.pg-migration}/bin/pg-migration -d ${folder} migrate -u postgres://postgres:${cfg.postgresPassword}@localhost:${toString cfg.port}/${db}${pgVariables}"
-                    ];
-                  };
-                };
-              })
-              cfg.migrationFolders)
-            {
-              postgresql.serviceConfig.Environment =
-                builtins.map (name: "${name}=${cfg.environment.${name}}")
-                (lib.attrNames cfg.environment);
-            }
-          ];
+          # systemd.services = lib.mkMerge [
+          #   {
+          #     postgresql.serviceConfig.Environment =
+          #       builtins.map (name: "${name}=${cfg.environment.${name}}")
+          #       (lib.attrNames cfg.environment);
+          #   }
+          # ];
           services.postgresql = {
             enable = true;
             package = cfg.package;
@@ -252,7 +215,7 @@
             settings =
               {
                 port = lib.mkForce cfg.port;
-                listen_addresses = "*";
+                listen_addresses = lib.mkForce cfg.host;
               }
               // cfg.settings
               // {
@@ -276,11 +239,7 @@
                   cfg.extensions)
               );
             authentication = lib.mkOverride 10 authPresets.${cfg.authPreset};
-            initialScript = pkgs.writeText "init-sql-script" (''
-                \echo '${cfg.postgresPassword}'
-                ALTER USER postgres WITH PASSWORD '${cfg.postgresPassword}';
-              ''
-              + (builtins.readFile cfg.initialScript));
+            initialScript = cfg.initialScript;
           };
         };
       };
