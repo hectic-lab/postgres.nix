@@ -212,17 +212,18 @@
             enable = true;
             package = cfg.package;
             enableTCPIP = cfg.enableTCPIP;
-            settings =
-              {
+            settings = lib.mkMerge [
+              ({
                 port = cfg.port;
                 listen_addresses = cfg.host;
-              }
-              // cfg.settings
-              // {
+              })
+              cfg.settings
+              ({
                 shared_preload_libraries =
                   lib.concatStringsSep ", "
                   (lib.attrNames (lib.filterAttrs (n: v: v && n != "http" && n != "pgjwt" && n != "pg_smtp_client") cfg.extensions));
-              };
+              })
+            ];
             extensions = let
               packages = {
                 inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client;
