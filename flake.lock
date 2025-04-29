@@ -89,15 +89,16 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1744747553,
-        "narHash": "sha256-eRO5my7YSTFFYsPasy8BmXzEPewi/pZhGhYzRM/VXus=",
+        "lastModified": 1745455023,
+        "narHash": "sha256-Qs7vPSohD8mDZjRce7mqSHoR6/fbTHlWwLv/9ClSQtE=",
         "owner": "hectic-lab",
         "repo": "util.nix",
-        "rev": "e607bf09fa750bd4e4b1337fe1fe1369091b65de",
+        "rev": "e800f1110389d3c878bb8601d399c62a56c57ef1",
         "type": "github"
       },
       "original": {
         "owner": "hectic-lab",
+        "ref": "fix/postgres-extension",
         "repo": "util.nix",
         "type": "github"
       }

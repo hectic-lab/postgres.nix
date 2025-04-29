@@ -10,7 +10,7 @@
       };
     };
     util = {
-      url = "github:hectic-lab/util.nix";
+      url = "github:hectic-lab/util.nix/fix/postgres-extension";
       inputs = {
         nixpkgs.follows = "nixpkgs";
       };
@@ -32,6 +32,7 @@
       nixpkgs.lib.nixosSystem {
         inherit system;
         modules = [
+          util.nixosModules."preset.default"
           ({ modulesPath, ... }: {
             imports = [
               (modulesPath + "/profiles/qemu-guest.nix")
@@ -49,7 +50,7 @@
               pg_net           = true;
               pg_smtp_client   = true;
               http             = true;
-	      postgreact       = true;
+	      hemar            = true;
             };
 
 	    hectic.postgres.authPreset = "allMixed";
@@ -59,34 +60,65 @@
 	    };
 
             # Provide an initial script if needed:
-            hectic.postgres.initialScript = 
-	    pkgs.writeText "init-sql-script" ''
-	      CREATE EXTENSION IF NOT EXISTS "http";
-              \set gateway_schema `echo $GATEWAY_SCHEMA`
-              SELECT :'gateway_schema' = ''' AS is_gateway_schema;
-              \gset
-              \if :is_gateway_schema
-                \echo 'Error: Environment variable GATEWAY_SCHEMA is not set.'
-                \quit 1
-              \endif
+            hectic.postgres = {
+	      initialScript = pkgs.writeText "init-sql-script" ''
+	          CREATE EXTENSION IF NOT EXISTS "http";
+                  \set gateway_schema `echo $GATEWAY_SCHEMA`
+                  SELECT :'gateway_schema' = ''' AS is_gateway_schema;
+                  \gset
+                  \if :is_gateway_schema
+                    \echo 'Error: Environment variable GATEWAY_SCHEMA is not set.'
+                    \quit 1
+                  \endif
 
-	      CREATE SCHEMA :gateway_schema;
+	          CREATE SCHEMA :gateway_schema;
 
-	      ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
-            '';
+	          ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
+
+	          CREATE EXTENSION hemar;
+                '';
+
+		settings = {
+		  "logging_collector" = "on";
+                  "log_directory" = "log";
+                  "log_filename" = "postgresql.log";
+                  "log_statement" = "all";
+                  "log_duration" = "on";
+		  "log_min_messages" = "debug";
+		};
 
 
-            hectic.postgres.migrationFolders = { 
-	      postgres = ./test/migration;
-	    };
+                migrationFolders = { 
+	          postgres = ./test/migration;
+	        };
+	      };
 	  }
-          {
-            environment.systemPackages = with pkgs; [ git curl neovim postgresql_15 postgresql_15.dev ];
+          ({config, ...}: {
+	    programs.zsh.shellAliases = {
+              check = "systemctl status postgresql > a; nvim a";
+	      sd = "shutdown now";
+	      hemar-path = "echo ${config.hectic.postgres.package.pkgs.hemar}";
+	      postgres-path = "echo ${config.hectic.postgres.package}";
+	      status = "systemctl status postgresql";
+	    };
+
+            environment.systemPackages = with pkgs; [ 
+	      git 
+	      gcc
+	      curl 
+	      neovim 
+	      postgresql_15 
+	      postgresql_15.dev
+	      hectic.c-hectic
+
+	      binutils
+	      patchelf
+	      lld
+	    ];
 
             virtualisation.vmVariant = {
               services.getty.autologinUser = "root";
               virtualisation.forwardPorts = [
-                { from = "host"; host.port = 40500; guest.port = 22; }
                 { from = "host"; host.port = 54321; guest.port = 5432; }
               ];
             };
@@ -112,7 +144,7 @@
             };
 
 	    system.stateVersion = "24.11";
-          }
+          })
         ];
       };
     }) // {
@@ -166,7 +198,7 @@
                 pg_net         = false;
                 pg_smtp_client = false;
                 http           = false;
-		postgreact     = false;
+		hemar          = false;
               };
             };
             initialScript = lib.mkOption {
@@ -241,7 +273,7 @@
 	    extensions =
 	    let 
               packages =  {
-		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client postgreact;
+		inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client hemar;
 	      };
             in
 	    lib.attrValues (lib.filterAttrs (n: v: v != null)
