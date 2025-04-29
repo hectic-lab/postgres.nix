@@ -215,7 +215,7 @@
             settings = lib.mkMerge [
               ({
                 port = cfg.port;
-                listen_addresses = cfg.host;
+                listen_addresses = lib.mkOverride 80 cfg.host;
               })
               cfg.settings
               ({
