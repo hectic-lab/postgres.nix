@@ -15,6 +15,12 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
+    util-hemar = {
+      url = "github:hectic-lab/util.nix?ref=fix/postgres-extension";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
   outputs = {
@@ -22,6 +28,7 @@
     nixpkgs,
     util,
     rust-overlay,
+    util-hemar,
     ...
   }: let
     trace = builtins.trace; # can change to builtins.traceVerbose to make it silent
@@ -53,6 +60,7 @@
               pg_net = true;
               pg_smtp_client = true;
               http = true;
+	      hemar = true;
             };
 
             hectic.postgres.authPreset = "allMixed";
@@ -173,6 +181,7 @@
                 pg_net = false;
                 pg_smtp_client = false;
                 http = false;
+		hemar = false;
               };
             };
             initialScript = lib.mkOption {
@@ -212,21 +221,28 @@
             enable = true;
             package = cfg.package;
             enableTCPIP = cfg.enableTCPIP;
+
+	    /* postgresql.config */
             settings = lib.mkMerge [
-              ({
+              {
                 port = cfg.port;
                 listen_addresses = lib.mkOverride 80 cfg.host;
-              })
-              cfg.settings
-              ({
                 shared_preload_libraries =
                   lib.concatStringsSep ", "
-                  (lib.attrNames (lib.filterAttrs (n: v: v && n != "http" && n != "pgjwt" && n != "pg_smtp_client") cfg.extensions));
-              })
+                  (lib.attrNames (
+		    lib.filterAttrs (n: v: v && 
+		         n != "http" 
+		      && n != "pgjwt" 
+		      && n != "pg_smtp_client"
+		  ) cfg.extensions));
+              }
+	      /* additional custom settings */
+              cfg.settings
             ];
             extensions = let
               packages = {
                 inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client;
+		hemar = util-hemar.packages.${system}.pg-15-hemar;
               };
             in
               lib.attrValues (

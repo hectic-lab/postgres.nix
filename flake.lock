@@ -32,11 +32,28 @@
         "type": "github"
       }
     },
+    "nixpkgs-unstable_2": {
+      "locked": {
+        "lastModified": 1739451785,
+        "narHash": "sha256-3ebRdThRic9bHMuNi2IAA/ek9b32bsy8F5R4SvGTIog=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "1128e89fd5e11bb25aedbfc287733c6502202ea9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixpkgs-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
-        "util": "util"
+        "util": "util",
+        "util-hemar": "util-hemar"
       }
     },
     "rust-overlay": {
@@ -80,6 +97,27 @@
         "type": "github"
       }
     },
+    "rust-overlay_3": {
+      "inputs": {
+        "nixpkgs": [
+          "util-hemar",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1738290352,
+        "narHash": "sha256-YKOHUmc0Clm4tMV8grnxYL4IIwtjTayoq/3nqk0QM7k=",
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "rev": "b031b584125d33d23a0182f91ddbaf3ab4880236",
+        "type": "github"
+      },
+      "original": {
+        "owner": "oxalica",
+        "repo": "rust-overlay",
+        "type": "github"
+      }
+    },
     "util": {
       "inputs": {
         "nixpkgs": [
@@ -98,6 +136,29 @@
       },
       "original": {
         "owner": "hectic-lab",
+        "repo": "util.nix",
+        "type": "github"
+      }
+    },
+    "util-hemar": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "nixpkgs-unstable": "nixpkgs-unstable_2",
+        "rust-overlay": "rust-overlay_3"
+      },
+      "locked": {
+        "lastModified": 1747915029,
+        "narHash": "sha256-4/4IWduI3ky0f4qSQMz42pzTpViVAxMP6HNNsMwItDM=",
+        "owner": "hectic-lab",
+        "repo": "util.nix",
+        "rev": "9c8a3790c54d807f1636cdf0c0dcd220c60486ba",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hectic-lab",
+        "ref": "fix/postgres-extension",
         "repo": "util.nix",
         "type": "github"
       }
