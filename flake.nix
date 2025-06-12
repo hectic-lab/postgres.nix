@@ -81,6 +81,12 @@
 
                 ALTER DATABASE postgres SET "app.gateway" TO :'gateway_schema';
               '';
+
+	      environment = { 
+	        TEXT = "aaa";
+		TEST = "bbb";
+	      };
+
 	    };
           }
           {
@@ -169,9 +175,14 @@
                 type = lib.types.attrsOf lib.types.bool;
                 default = extensionFlags;
               };
+	      environment = lib.mkOption {
+                type    = lib.types.attrsOf lib.types.str;
+                default = {};
+              };
 	    };
           };
           config = lib.mkIf cfg.enable {
+	    systemd.services.postgresql.environment = cfg.environment;
             services.postgresql = {
 	      settings.shared_preload_libraries =
                 lib.concatStringsSep ", "
