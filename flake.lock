@@ -149,11 +149,11 @@
         "rust-overlay": "rust-overlay_3"
       },
       "locked": {
-        "lastModified": 1747915029,
-        "narHash": "sha256-4/4IWduI3ky0f4qSQMz42pzTpViVAxMP6HNNsMwItDM=",
+        "lastModified": 1751299603,
+        "narHash": "sha256-C+g6De+NiIlmQKNZlaXlzv7t2rzrO7vIohIHzfVee8U=",
         "owner": "hectic-lab",
         "repo": "util.nix",
-        "rev": "9c8a3790c54d807f1636cdf0c0dcd220c60486ba",
+        "rev": "8a13b8c8fd932f7e593b3c8730b7ecd806495780",
         "type": "github"
       },
       "original": {
