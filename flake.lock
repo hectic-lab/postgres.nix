@@ -32,27 +32,10 @@
         "type": "github"
       }
     },
-    "nixpkgs-unstable_2": {
-      "locked": {
-        "lastModified": 1739451785,
-        "narHash": "sha256-3ebRdThRic9bHMuNi2IAA/ek9b32bsy8F5R4SvGTIog=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1128e89fd5e11bb25aedbfc287733c6502202ea9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
-        "util": "util",
         "util-hemar": "util-hemar"
       }
     },
@@ -79,27 +62,6 @@
     "rust-overlay_2": {
       "inputs": {
         "nixpkgs": [
-          "util",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1738290352,
-        "narHash": "sha256-YKOHUmc0Clm4tMV8grnxYL4IIwtjTayoq/3nqk0QM7k=",
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "rev": "b031b584125d33d23a0182f91ddbaf3ab4880236",
-        "type": "github"
-      },
-      "original": {
-        "owner": "oxalica",
-        "repo": "rust-overlay",
-        "type": "github"
-      }
-    },
-    "rust-overlay_3": {
-      "inputs": {
-        "nixpkgs": [
           "util-hemar",
           "nixpkgs"
         ]
@@ -118,7 +80,7 @@
         "type": "github"
       }
     },
-    "util": {
+    "util-hemar": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
@@ -127,33 +89,11 @@
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1739726462,
-        "narHash": "sha256-y71MuuMXbV0kdOsodnwv4+E6RVRxLpYbRs7rI1qOuUI=",
+        "lastModified": 1751301064,
+        "narHash": "sha256-/fYo5Emc7Ahvdx2u2o+6lyQxe+ECP0808q4gI5tfAGA=",
         "owner": "hectic-lab",
         "repo": "util.nix",
-        "rev": "4d1c210986101d869f642c8c6976eed3f0192fb3",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hectic-lab",
-        "repo": "util.nix",
-        "type": "github"
-      }
-    },
-    "util-hemar": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "nixpkgs-unstable": "nixpkgs-unstable_2",
-        "rust-overlay": "rust-overlay_3"
-      },
-      "locked": {
-        "lastModified": 1751299603,
-        "narHash": "sha256-C+g6De+NiIlmQKNZlaXlzv7t2rzrO7vIohIHzfVee8U=",
-        "owner": "hectic-lab",
-        "repo": "util.nix",
-        "rev": "8a13b8c8fd932f7e593b3c8730b7ecd806495780",
+        "rev": "5e112f5df8b977c64fa026ff1bc31a47eb48ec02",
         "type": "github"
       },
       "original": {
