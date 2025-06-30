@@ -9,8 +9,8 @@
         nixpkgs.follows = "nixpkgs";
       };
     };
-    util-hemar = {
-      url = "github:hectic-lab/util.nix?ref=fix/postgres-extension";
+    util = {
+      url = "github:hectic-lab/util.nix";
       inputs = {
         nixpkgs.follows = "nixpkgs";
       };
@@ -21,10 +21,9 @@
     self,
     nixpkgs,
     rust-overlay,
-    util-hemar,
+    util,
     ...
   }: let
-    util = util-hemar;
     trace = builtins.trace; # can change to builtins.traceVerbose to make it silent
     overlays = [
       (import rust-overlay)
@@ -193,7 +192,7 @@
               extensions = let
                 packages = {
                   inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client plsh;
-                  hemar = util-hemar.packages.${system}.pg-15-hemar;
+                  hemar = util.packages.${system}.pg-15-hemar;
                 };
               in
                 lib.attrValues (
@@ -299,7 +298,7 @@
               extensions = let
                 packages = {
                   inherit (cfg.package.pkgs) pg_net pgjwt pg_cron http pg_smtp_client;
-          	hemar = util-hemar.packages.${system}.pg-15-hemar;
+          	hemar = util.packages.${system}.pg-15-hemar;
                 };
               in
                 lib.attrValues (

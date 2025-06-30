@@ -16,27 +16,11 @@
         "type": "github"
       }
     },
-    "nixpkgs-unstable": {
-      "locked": {
-        "lastModified": 1739451785,
-        "narHash": "sha256-3ebRdThRic9bHMuNi2IAA/ek9b32bsy8F5R4SvGTIog=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "1128e89fd5e11bb25aedbfc287733c6502202ea9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixpkgs-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs",
         "rust-overlay": "rust-overlay",
-        "util-hemar": "util-hemar"
+        "util": "util"
       }
     },
     "rust-overlay": {
@@ -62,7 +46,7 @@
     "rust-overlay_2": {
       "inputs": {
         "nixpkgs": [
-          "util-hemar",
+          "util",
           "nixpkgs"
         ]
       },
@@ -80,25 +64,23 @@
         "type": "github"
       }
     },
-    "util-hemar": {
+    "util": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
         ],
-        "nixpkgs-unstable": "nixpkgs-unstable",
         "rust-overlay": "rust-overlay_2"
       },
       "locked": {
-        "lastModified": 1751301064,
-        "narHash": "sha256-/fYo5Emc7Ahvdx2u2o+6lyQxe+ECP0808q4gI5tfAGA=",
+        "lastModified": 1751317204,
+        "narHash": "sha256-ulhwMO4tNzDzPqnU4sx/eN3SaqeDuG5o0i7kVKk7SDA=",
         "owner": "hectic-lab",
         "repo": "util.nix",
-        "rev": "5e112f5df8b977c64fa026ff1bc31a47eb48ec02",
+        "rev": "c73c887a9cab608adc3852705c19694cec379bba",
         "type": "github"
       },
       "original": {
         "owner": "hectic-lab",
-        "ref": "fix/postgres-extension",
         "repo": "util.nix",
         "type": "github"
       }
